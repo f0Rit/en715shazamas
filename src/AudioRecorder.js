@@ -146,15 +146,14 @@ const AudioRecorder = () => {
         async function tellAnswer() {
             if (correctSongFound) {
                 console.log("lol");
-                setStatusText('Sneku Atsakyma');
-                await new Promise(resolve => setTimeout(resolve, 10)); // Introduce a slight delay
+                setStatusText('en715amazingsinger');
                 if ('speechSynthesis' in window) {
                     await speakUtterance();
                 } else {
                     setStatusText('Jūsų įrenginys nepalaiko šio svarbaus funkcionalumo.');
                 }
                 setCorrectSongFound(false);
-                setStatusText("Paspausk mygtuką, kai muzoną paleisi");
+                setTimeout(setStatusText, 3000, "Paspausk mygtuką, kai muzoną paleisi");
             }
         }
         const speakUtterance = () => {
