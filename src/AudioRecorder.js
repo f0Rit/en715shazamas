@@ -6,7 +6,7 @@ import micImage from './mic.png';
 
 const AudioRecorder = () => {
     const [recording, setRecording] = useState(false);
-    const [statusText, setStatusText] = useState("Paspausk mygtuka, kai muzona paleisi");
+    const [statusText, setStatusText] = useState("Paspausk mygtuką, kai muzona paleisi");
     const [songInfo, setSongInfo] = useState(null);
     const [correctSongFound, setCorrectSongFound] = useState(false);
 
