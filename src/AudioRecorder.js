@@ -83,14 +83,14 @@ const AudioRecorder = () => {
                         const song = response.data.track.title;
                         const artist = response.data.track.subtitle;
                         setSongInfo({ song: song, artist: artist });
-                        if (song === 'Rolling In the Deep' && artist === 'Adele') {
+                        if (song === 'Rolling In the Deep' || artist === 'Adele') {
                             correctSong = true;
                         }
                     } else {
-                        setStatusText('Nieko gero neisigrdau, meginkite dar karta');
+                        setStatusText('Nieko gero neišgirdau, mėgink dar kartą');
                     }
                 } catch (error) {
-                    setStatusText('KLAIDA. Meginkite dar karta');
+                    setStatusText('KLAIDA. Mėgink dar kartą');
                     console.error(error);
                 }
             };
@@ -119,10 +119,10 @@ const AudioRecorder = () => {
                     track.stop();
                 });
                 mediaRecorder.stop();
-                setRecording(false);
                 if (correctSong) {
                     setTimeout(setCorrectSongFound, 2000, true);
                 }
+                setRecording(false);
             };
 
             const handleMediaError = (e) => {
@@ -154,7 +154,7 @@ const AudioRecorder = () => {
                     setStatusText('Jūsų įrenginys nepalaiko šio svarbaus funkcionalumo.');
                 }
                 setCorrectSongFound(false);
-                setStatusText("Paspausk mygtuka, kai muzona paleisi");
+                setStatusText("Paspausk mygtuką, kai muzoną paleisi");
             }
         }
         const speakUtterance = () => {
