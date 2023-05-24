@@ -9,6 +9,7 @@ const AudioRecorder = () => {
     const [statusText, setStatusText] = useState("Paspausk mygtuką, kai muzona paleisi");
     const [songInfo, setSongInfo] = useState(null);
     const [correctSongFound, setCorrectSongFound] = useState(false);
+    const [restoreText, setRestoreText] = useState(false);
 
 
     useEffect(() => {
@@ -43,17 +44,20 @@ const AudioRecorder = () => {
     useEffect(() => {
         let mediaRecorder;
         let mediaStream;
-        let correctSong = false;
 
         if (recording) {
+            let correctSong = false;
             const mediaConstraints = { audio: true };
 
             const handleDataAvailable = async (blob) => {
+                let analyzeSong = blob.size > 200624;
                 blobToBase64(blob, async function (base64String) {
                     const audioData = correctThaData(base64String);
                     setStatusText('Analizuoju');
-                    await detectSong(audioData);
-                  //  correctSong = true;
+                    if (analyzeSong) {
+                       await detectSong(audioData);
+                    }
+                   // correctSong = true;
                     stopRecording();
                     console.log(audioData);
                 });
@@ -89,6 +93,7 @@ const AudioRecorder = () => {
                     } else {
                         setStatusText('Nieko gero neišgirdau, mėgink dar kartą');
                     }
+                    console.log("sudas");
                 } catch (error) {
                     setStatusText('KLAIDA. Mėgink dar kartą');
                     console.error(error);
@@ -104,14 +109,13 @@ const AudioRecorder = () => {
             }
 
             const startRecording = (stream) => {
+                setStatusText('Klausau');
                 mediaStream = stream;
                 mediaRecorder = new MediaStreamRecorder(stream);
                 mediaRecorder.mimeType = 'audio/pcm';
                 mediaRecorder.audioChannels = 1;
                 mediaRecorder.ondataavailable = handleDataAvailable;
                 mediaRecorder.start(3000);
-                setStatusText('Klausau');
-                setRecording(true);
             };
 
             const stopRecording = () => {
@@ -121,8 +125,9 @@ const AudioRecorder = () => {
                 mediaRecorder.stop();
                 if (correctSong) {
                     setTimeout(setCorrectSongFound, 2000, true);
+                } else {
+                    setRestoreText(true);
                 }
-                setRecording(false);
             };
 
             const handleMediaError = (e) => {
@@ -145,29 +150,39 @@ const AudioRecorder = () => {
     useEffect(() => {
         async function tellAnswer() {
             if (correctSongFound) {
-                console.log("lol");
                 setStatusText('en715amazingsinger');
                 if ('speechSynthesis' in window) {
-                    await speakUtterance();
+                    //      await speakUtterance().catch("Negaliu šiuo metu šnekėti tai imk kodą: en715amazingsinger");
                 } else {
                     setStatusText('Jūsų įrenginys nepalaiko šio svarbaus funkcionalumo.');
                 }
+                setRestoreText(true);
                 setCorrectSongFound(false);
-                setTimeout(setStatusText, 3000, "Paspausk mygtuką, kai muzoną paleisi");
             }
         }
-        const speakUtterance = () => {
-            return new Promise((resolve, reject) => {
+        function speakUtterance() {
+            return new Promise(() => {
                 const utterance = new window.SpeechSynthesisUtterance("code is en715 amazing singer");
-                utterance.rate = 0.7;
-                utterance.onend = resolve;
-                utterance.onerror = reject;
+                utterance.onerror = (event) => {
+                    setStatusText(event);
+                };
+                utterance.rate = 0.7
                 window.speechSynthesis.cancel();
                 window.speechSynthesis.speak(utterance);
             });
         };
         tellAnswer();
+        setTimeout(setRecording, 4000, false);
+        setTimeout(setSongInfo, 4000, null);
+        
     }, [correctSongFound]);
+
+    useEffect(() => {
+        if(restoreText) {
+            setTimeout(setStatusText, 3000, "Paspausk mygtuką, kai muzoną paleisi");
+            setRestoreText(false);
+        }
+    }, [restoreText]);
 
 
     const buttonStyle = {
