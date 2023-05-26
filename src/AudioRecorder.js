@@ -40,25 +40,33 @@ const AudioRecorder = () => {
     }, []);
 
     useEffect(() => {
-        let mediaRecorder = null;
-        let mediaStream = null;
-
         if (recording) {
+            let mediaRecorder = null;
+            let mediaStream = null;
+            var recordedBlobs;
+
             const mediaConstraints = { audio: true };
 
             const handleDataAvailable = async (blob) => {
-                let analyzeSong = blob.size > 200624 ;
-                blobToBase64(blob, async function (base64String) {
+                if (blob && blob.size > 0) {
+                    recordedBlobs.push(blob);
+                }
+            };
+
+            function analyzeData() {
+                var type = (recordedBlobs[0] || {}).type;
+                var superBuffer = new Blob(recordedBlobs, { type });
+                let analyzeSong = superBuffer.size > 200624;
+                blobToBase64(superBuffer, async function (base64String) {
                     const audioData = correctThaData(base64String);
                     setStatusText('Analizuoju');
                     if (analyzeSong) {
                         await detectSong(audioData);
                     }
-                   // correctSong = true;
                     console.log(audioData);
                     setRecording(false);
                 });
-            };
+            }
 
             function correctThaData(data) {
                 let editedData = data.replace(/^data:audio\/pcm;base64,/, '');
@@ -79,26 +87,32 @@ const AudioRecorder = () => {
                         data: audioData
                     });
 
-                    console.log(response);
                     if (response && response.data && response.data.track) {
-                        const song = response.data.track.title;
-                        const artist = response.data.track.subtitle;
-                        setSongInfo({ song: song, artist: artist });
-                        if (song.includes('Rolling In the Deep') || artist === 'Adele') {
+                        const song = response.data.track.title.toLowerCase();
+                        const artist = response.data.track.subtitle.toLowerCase();
+                        if (song.includes('rolling in the deep') || artist === 'adele') {
                             setStatusText('en715amazingsinger');
                         }
                         else {
                             setStatusText("Ne ta daina");
+                            setSongInfo({ song: song, artist: artist });
                         }
                     } else {
                         setStatusText('Nieko gero neišgirdau, mėgink dar kartą');
                     }
-                
+                    console.log("palaukiam");
+                    await delay(3000);
+                    console.log("baigemLaukti");
                 } catch (error) {
                     setStatusText('KLAIDA. Mėgink dar kartą');
                     console.error(error);
                 }
+
             };
+
+            function delay(ms) {
+                return new Promise((resolve) => setTimeout(resolve, ms));
+            }
 
             function blobToBase64(blob, callback) {
                 var reader = new FileReader();
@@ -109,13 +123,15 @@ const AudioRecorder = () => {
             }
 
             const startRecording = (stream) => {
-                setStatusText('Klausau');
+                recordedBlobs = [];
                 mediaStream = stream;
                 mediaRecorder = new MediaStreamRecorder(stream);
                 mediaRecorder.mimeType = 'audio/pcm';
                 mediaRecorder.audioChannels = 1;
                 mediaRecorder.ondataavailable = handleDataAvailable;
-                mediaRecorder.start(3000);
+                mediaRecorder.start(10);
+                setTimeout(mediaRecorder.stop, 4000);
+                setTimeout(analyzeData, 5000);
             };
 
             const handleMediaError = (e) => {
@@ -126,22 +142,33 @@ const AudioRecorder = () => {
                 .getUserMedia(mediaConstraints)
                 .then(startRecording)
                 .catch(handleMediaError);
+
             return () => {
                 console.log("stopinu");
-                mediaRecorder?.stop();
                 mediaStream?.getTracks().forEach((track) => {
                     track.stop();
                 });
-                setTimeout(setStatusText, 3000, "Paspausk mygtuką, kai muzoną paleisi");
-                setTimeout(setSongInfo, 4000, null);
-                setTimeout(setShowMic, 3000, true);
+                setTimeout(setSongInfo, 5000, null);
+                setStatusText("Paspausk mygtuką, kai muzoną paleisi");
+                setShowMic(true);
             };
         }
     }, [recording]);
 
+    useEffect(() => {
+        if (!showMic) {
+            // Set the flag to trigger the first useEffect
+            setStatusText('Klausau');
+            setRecording(true);
+            // Handle recording start or status changes
+        } else {
+            // Handle recording stop or status changes
+        }
+    }, [showMic]);
+
     const handleStartRecording = () => {
         setShowMic(false);
-        setRecording(true);
+        //setRecording(true);
     };
 
     const buttonStyle = {
