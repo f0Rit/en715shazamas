@@ -6,11 +6,9 @@ import micImage from './mic.png';
 
 const AudioRecorder = () => {
     const [recording, setRecording] = useState(false);
+    const [showMic, setShowMic] = useState(true);
     const [statusText, setStatusText] = useState("Paspausk mygtuką, kai muzona paleisi");
     const [songInfo, setSongInfo] = useState(null);
-    const [correctSongFound, setCorrectSongFound] = useState(false);
-    const [restoreText, setRestoreText] = useState(false);
-
 
     useEffect(() => {
         let wakeLock = null;
@@ -42,24 +40,23 @@ const AudioRecorder = () => {
     }, []);
 
     useEffect(() => {
-        let mediaRecorder;
-        let mediaStream;
+        let mediaRecorder = null;
+        let mediaStream = null;
 
         if (recording) {
-            let correctSong = false;
             const mediaConstraints = { audio: true };
 
             const handleDataAvailable = async (blob) => {
-                let analyzeSong = blob.size > 200624;
+                let analyzeSong = blob.size > 200624 ;
                 blobToBase64(blob, async function (base64String) {
                     const audioData = correctThaData(base64String);
                     setStatusText('Analizuoju');
                     if (analyzeSong) {
-                       await detectSong(audioData);
+                        await detectSong(audioData);
                     }
                    // correctSong = true;
-                    stopRecording();
                     console.log(audioData);
+                    setRecording(false);
                 });
             };
 
@@ -72,7 +69,7 @@ const AudioRecorder = () => {
                 try {
                     const response = await axios({
                         method: 'POST',
-                        url: 'https://shazam.p.rapidapi.com/songs/v2/detect',
+                        url: 'https://shazam.p.rapidapi.com/songs/detect',
                         params: { locale: 'en-US' },
                         headers: {
                             'content-type': 'text/plain',
@@ -87,13 +84,16 @@ const AudioRecorder = () => {
                         const song = response.data.track.title;
                         const artist = response.data.track.subtitle;
                         setSongInfo({ song: song, artist: artist });
-                        if (song === 'Rolling In the Deep' || artist === 'Adele') {
-                            correctSong = true;
+                        if (song.includes('Rolling In the Deep') || artist === 'Adele') {
+                            setStatusText('en715amazingsinger');
+                        }
+                        else {
+                            setStatusText("Ne ta daina");
                         }
                     } else {
                         setStatusText('Nieko gero neišgirdau, mėgink dar kartą');
                     }
-                    console.log("sudas");
+                
                 } catch (error) {
                     setStatusText('KLAIDA. Mėgink dar kartą');
                     console.error(error);
@@ -118,18 +118,6 @@ const AudioRecorder = () => {
                 mediaRecorder.start(3000);
             };
 
-            const stopRecording = () => {
-                mediaStream.getTracks().forEach((track) => {
-                    track.stop();
-                });
-                mediaRecorder.stop();
-                if (correctSong) {
-                    setTimeout(setCorrectSongFound, 2000, true);
-                } else {
-                    setRestoreText(true);
-                }
-            };
-
             const handleMediaError = (e) => {
                 console.error('media error', e);
             };
@@ -139,51 +127,22 @@ const AudioRecorder = () => {
                 .then(startRecording)
                 .catch(handleMediaError);
             return () => {
+                console.log("stopinu");
+                mediaRecorder?.stop();
+                mediaStream?.getTracks().forEach((track) => {
+                    track.stop();
+                });
+                setTimeout(setStatusText, 3000, "Paspausk mygtuką, kai muzoną paleisi");
+                setTimeout(setSongInfo, 4000, null);
+                setTimeout(setShowMic, 3000, true);
             };
         }
     }, [recording]);
 
     const handleStartRecording = () => {
+        setShowMic(false);
         setRecording(true);
     };
-
-    useEffect(() => {
-        async function tellAnswer() {
-            if (correctSongFound) {
-                setStatusText('en715amazingsinger');
-                if ('speechSynthesis' in window) {
-                    //      await speakUtterance().catch("Negaliu šiuo metu šnekėti tai imk kodą: en715amazingsinger");
-                } else {
-                    setStatusText('Jūsų įrenginys nepalaiko šio svarbaus funkcionalumo.');
-                }
-                setRestoreText(true);
-                setCorrectSongFound(false);
-            }
-        }
-        function speakUtterance() {
-            return new Promise(() => {
-                const utterance = new window.SpeechSynthesisUtterance("code is en715 amazing singer");
-                utterance.onerror = (event) => {
-                    setStatusText(event);
-                };
-                utterance.rate = 0.7
-                window.speechSynthesis.cancel();
-                window.speechSynthesis.speak(utterance);
-            });
-        };
-        tellAnswer();
-        setTimeout(setRecording, 4000, false);
-        setTimeout(setSongInfo, 4000, null);
-        
-    }, [correctSongFound]);
-
-    useEffect(() => {
-        if(restoreText) {
-            setTimeout(setStatusText, 3000, "Paspausk mygtuką, kai muzoną paleisi");
-            setRestoreText(false);
-        }
-    }, [restoreText]);
-
 
     const buttonStyle = {
         width: '10vw',  // Adjust the width based on the viewport width
@@ -195,7 +154,7 @@ const AudioRecorder = () => {
 
             <p>{statusText}</p>
 
-            {!recording && (
+            {showMic && (
                 <button onClick={handleStartRecording} style={buttonStyle}>
                     <img src={micImage} alt="Microphone" style={{ width: '100%', height: '100%' }} />
                 </button>
